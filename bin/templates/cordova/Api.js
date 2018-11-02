@@ -243,7 +243,7 @@ class Api {
 
         let platform = this.platform;
         if (! pluginInfo.getPlatformsArray().includes(platform)) { // if `cordova-electron` is not defined in plugin.xml, `browser` is used instead.
-            platform = "browser";
+            platform = 'browser';
         }
 
         // gather all files needs to be handled during install
