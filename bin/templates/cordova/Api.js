@@ -241,7 +241,7 @@ class Api {
         const actions = new ActionStack();
         const projectFile = this.handler.parseProjectFile && this.handler.parseProjectFile(this.root);
 
-        var platform = this.platform;
+        let platform = this.platform;
         if (! pluginInfo.getPlatformsArray().includes(platform)) { // if `cordova-electron` is not defined in plugin.xml, `browser` is used instead.
             platform = "browser";
         }
