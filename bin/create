@@ -66,7 +66,8 @@ if (argv.help || !projectPath) {
     const options = {
         cli: argv.cli,
         link: argv.link || argv.shared,
-        customTemplate: argv.argv.remain[3]
+        customTemplate: argv.argv.remain[3],
+        copyPlatformNodeModules: true
     };
 
     Api.createPlatform(projectPath, config, options);

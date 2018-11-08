@@ -57,7 +57,7 @@ module.exports.createProject = (project_path, package_name, project_name, option
     fs.copySync(path.join(ROOT, 'bin/templates/project/www'), path.join(project_path, 'www'), { overwrite: false });
 
     // recreate our node_modules structure in the new project
-    fs.copySync(path.join(ROOT, 'node_modules'), path.join(project_path, 'cordova', 'node_modules'), { overwrite: false });
+    if (options && options.copyPlatformNodeModules) fs.copySync(path.join(ROOT, 'node_modules'), path.join(project_path, 'cordova', 'node_modules'), { overwrite: false });
 
     const platform_www = path.join(project_path, 'platform_www');
 
