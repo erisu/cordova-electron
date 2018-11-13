@@ -24,7 +24,6 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-
 const builder = require('electron-builder');
 // const { Platform, createTargets, DIR_TARGET } = require('electron-builder');
 // const { ConfigParser, xmlHelpers } = require('cordova-common');
@@ -43,69 +42,70 @@ function deepMerge (mergeTo, mergeWith) {
     return mergeTo;
 }
 
-module.exports.run = (buildOptions, api) => {
-    return require('./check_reqs')
-        .run()
-        .then(() => {
-            // const isDevelopment = false;
-            // const config = new ConfigParser(api.locations.configXml);
+function fetchPlatformDefaults (platform) {
+    const platformFile = path.resolve(__dirname, `./build/${platform}.json`);
+    if (!fs.existsSync(platformFile)) {
+        throw `Your platform "${platform}" is not supported as a default target platform for Electron.`;
+    }
 
-            const baseConfig = require(path.resolve(__dirname, './build/base.json'));
-            let platformConfig;
+    return require(platformFile);
+}
 
-            // first load the build configs and format config if present.
-            if (buildOptions && buildOptions.buildConfig && fs.existsSync(buildOptions.buildConfig)) {
-                // Load build configuration JSON file
-                // Check for electron platform
-                // Then each node under electron represents the targeting platform.
-                //  -> Compile Platform Configs
-            }
+function fetchUserBuildSettings (buildOptions) {
+    // first load the build configs and format config if present.
+    if (buildOptions && buildOptions.buildConfig && fs.existsSync(buildOptions.buildConfig)) {
+        // Load build configuration JSON file
+        // Check for electron platform
+        // Then each node under electron represents the targeting platform.
+        //  -> Compile Platform Configs
+    }
 
-            // Skip defaults if platform config exists from user defined platform.
-            if (!platformConfig) {
-                switch (process.platform) {
-                case 'win32':
-                    platformConfig = require(path.resolve(__dirname, './build/windows.json'));
-                    break;
+    return false;
+}
 
-                case 'darwin':
-                    platformConfig = require(path.resolve(__dirname, './build/mac.json'));
-                    break;
+function createBuildSettings (userConfig) {
+    const baseConfig = require(path.resolve(__dirname, './build/base.json'));
+    const platformConfig = userConfig || fetchPlatformDefaults(process.platform);
 
-                default:
-                    platformConfig = require(path.resolve(__dirname, './build/linux.json'));
-                    break;
-                }
-            }
+    return deepMerge(baseConfig, platformConfig);
+}
 
-            // First merge the configs and start in string format for editing
-            let buildSettings = JSON.stringify(deepMerge(baseConfig, platformConfig));
+function prepareBuildSettings (buildSettings, api) {
+    // const isDevelopment = false;
+    const packageJson = require(path.join(api.locations.www, 'package.json'));
+    const userConfig = {
+        APP_ID: packageJson.name,
+        APP_TITLE: packageJson.displayName,
+        APP_WWW_DIR: api.locations.www,
+        APP_BUILD_DIR: api.locations.build,
+        BUILD_TYPE: 'distribution'
+    };
 
-            const userConfig = {
-                APP_ID: 'com.erisu.electron',
-                APP_TITLE: 'My Electron App',
-                APP_WWW_DIR: api.locations.www,
-                APP_BUILD_DIR: api.locations.build,
-                BUILD_TYPE: 'distribution'
-            };
+    // convert to string for string replacement
+    buildSettings = JSON.stringify(buildSettings);
 
-            Object.keys(userConfig).forEach((key) => {
-                const regex = new RegExp(`\\$\\{${key}\\}`, 'g');
-                buildSettings = buildSettings.replace(regex, userConfig[key]);
-            });
+    Object.keys(userConfig).forEach((key) => {
+        const regex = new RegExp(`\\$\\{${key}\\}`, 'g');
+        buildSettings = buildSettings.replace(regex, userConfig[key]);
+    });
 
-            // convert back to object after editing.
-            buildSettings = JSON.parse(buildSettings);
+    // convert back to object and return.
+    return JSON.parse(buildSettings);
+}
 
-            return buildSettings;
-        })
-        .then((buildSettings) => {
-            return builder.build(buildSettings);
-        })
-        .catch((error) => {
-            console.log(error);
-        });
-};
+module.exports.run = (buildOptions, api) => require('./check_reqs')
+    .run()
+    .then(() => buildOptions)
+    .then(fetchUserBuildSettings)
+    .then(createBuildSettings)
+    .then((buildSettings) => prepareBuildSettings.bind(this, buildSettings, api))
+    .then((buildSettings) => {
+        console.log(buildSettings);
+        return builder.build(buildSettings);
+    })
+    .catch((error) => {
+        console.log(error);
+    });
 
 module.exports.help = () => {
     console.log('Usage: cordova build electron');
