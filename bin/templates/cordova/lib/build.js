@@ -17,16 +17,8 @@
     under the License.
 */
 
-/**
-* run
-*   Creates a zip file int platform/build folder
-*/
-
 const fs = require('fs-extra');
 const path = require('path');
-const builder = require('electron-builder');
-// const { Platform, createTargets, DIR_TARGET } = require('electron-builder');
-// const { ConfigParser, xmlHelpers } = require('cordova-common');
 
 function deepMerge (mergeTo, mergeWith) {
     for (const property in mergeWith) {
@@ -42,66 +34,128 @@ function deepMerge (mergeTo, mergeWith) {
     return mergeTo;
 }
 
-function fetchPlatformDefaults (platform) {
-    const platformFile = path.resolve(__dirname, `./build/${platform}.json`);
-    if (!fs.existsSync(platformFile)) {
-        throw `Your platform "${platform}" is not supported as a default target platform for Electron.`;
+const PLATFORM_MAPPING = {
+    linux: 'linux',
+    mac: 'darwin',
+    windows: 'win32'
+};
+
+class ElectronBuilder {
+    constructor (buildOptions, api) {
+        this.api = api;
+        this.isDevelopment = buildOptions.debug;
+        this.buildConfig = buildOptions && buildOptions.buildConfig && fs.existsSync(buildOptions.buildConfig) ? require(buildOptions.buildConfig) : false;
     }
 
-    return require(platformFile);
-}
+    configure () {
+        this.buildSettings = this.configureUserBuildSettings()
+            .configureBuildSettings();
 
-function fetchUserBuildSettings (buildOptions) {
-    // first load the build configs and format config if present.
-    if (buildOptions && buildOptions.buildConfig && fs.existsSync(buildOptions.buildConfig)) {
-        // Load build configuration JSON file
-        // Check for electron platform
-        // Then each node under electron represents the targeting platform.
-        //  -> Compile Platform Configs
+        // Replace the templated placeholders with the project defined settings into the buildSettings.
+        this.injectProjectConfigToBuildSettings();
+
+        return this;
     }
 
-    return false;
-}
+    configureUserBuildSettings (buildOptions) {
+        if (this.buildConfig && this.buildConfig.electron) {
+            let userBuildSettings = {};
 
-function createBuildSettings (userConfig) {
-    const baseConfig = require(path.resolve(__dirname, './build/base.json'));
-    const platformConfig = userConfig || fetchPlatformDefaults(process.platform);
+            for (const platform in this.buildConfig.electron) {
+                if(platform !== 'mac' && platform !== 'linux' && platform !== 'windows') continue;
 
-    return deepMerge(baseConfig, platformConfig);
-}
+                if(Object.keys(this.buildConfig.electron[platform]).length === 0) {
+                    // user is looking for this platform to be built but with default configurations.
+                    userBuildSettings = deepMerge(userBuildSettings, this.fetchPlatformDefaults(PLATFORM_MAPPING[platform]));
+                } else if (!this.buildConfig.electron[platform].package && !this.buildConfig.electron[platform].arch) {
+                    throw `The platform "${platform}" contains an invalid property. Valid properties are: package, arch`;
+                } else {
+                    userBuildSettings[platform] = [];
+                
+                    if (!userBuildSettings.config) userBuildSettings.config = {};
+                    
+                    userBuildSettings.config[platform] = {
+                        type: '${BUILD_TYPE}',
+                        target: []
+                    }
 
-function prepareBuildSettings (buildSettings, api) {
-    // const isDevelopment = false;
-    const packageJson = require(path.join(api.locations.www, 'package.json'));
-    const userConfig = {
-        APP_ID: packageJson.name,
-        APP_TITLE: packageJson.displayName,
-        APP_WWW_DIR: api.locations.www,
-        APP_BUILD_DIR: api.locations.build,
-        BUILD_TYPE: 'distribution'
-    };
+                    if (this.buildConfig.electron[platform].package) {
+                        this.buildConfig.electron[platform].package.forEach((target) => {
+                            userBuildSettings.config[platform].target.push({
+                                target,
+                                arch: this.buildConfig.electron[platform].arch || ['x64']
+                            });
+                        })
+                    } else {
+                        // handle missing platform case.
+                        // const platformDefaults = this.fetchPlatformDefaults(PLATFORM_MAPPING[platform]);
+                        // userBuildSettings.config[platform].target.push({
+                        //     target: platformDefaults.config[platform].target[0].,
+                        //     arch: this.buildConfig.electron[platform].arch || ['x64']
+                        // });
+                    }
+                }
+            }
+            
+            this.userBuildSettings = userBuildSettings;
+        }
 
-    // convert to string for string replacement
-    buildSettings = JSON.stringify(buildSettings);
+        return this;
+    }
 
-    Object.keys(userConfig).forEach((key) => {
-        const regex = new RegExp(`\\$\\{${key}\\}`, 'g');
-        buildSettings = buildSettings.replace(regex, userConfig[key]);
-    });
+    configureBuildSettings () {
+        const baseConfig = require(path.resolve(__dirname, './build/base.json'));
+        const platformConfig = this.userBuildSettings || this.fetchPlatformDefaults(process.platform);
 
-    // convert back to object and return.
-    return JSON.parse(buildSettings);
+        return deepMerge(baseConfig, platformConfig);
+    }
+
+    injectProjectConfigToBuildSettings () {
+        // const isDevelopment = false;
+        const packageJson = require(path.join(this.api.locations.www, 'package.json'));
+        const userConfig = {
+            APP_ID: packageJson.name,
+            APP_TITLE: packageJson.displayName,
+            APP_WWW_DIR: this.api.locations.www,
+            APP_BUILD_DIR: this.api.locations.build,
+            BUILD_TYPE: this.isDevelopment ? 'development' : 'distribution'
+        };
+
+        // convert to string for string replacement
+        let buildSettingsString = JSON.stringify(this.buildSettings);
+
+        Object.keys(userConfig).forEach((key) => {
+            const regex = new RegExp(`\\$\\{${key}\\}`, 'g');
+            buildSettingsString = buildSettingsString.replace(regex, userConfig[key]);
+        });
+
+        // update build settings with formated data
+        this.buildSettings = JSON.parse(buildSettingsString);
+
+        return this;
+    }
+
+    fetchPlatformDefaults (platform) {
+        const platformFile = path.resolve(__dirname, `./build/${platform}.json`);
+
+        if (!fs.existsSync(platformFile)) {
+            throw `Your platform "${platform}" is not supported as a default target platform for Electron.`;
+        }
+
+        return require(platformFile);
+    }
+
+    build () {
+        return require('electron-builder').build(this.buildSettings);
+    }
 }
 
 module.exports.run = (buildOptions, api) => require('./check_reqs')
     .run()
-    .then(() => buildOptions)
-    .then(fetchUserBuildSettings)
-    .then(createBuildSettings)
-    .then((buildSettings) => prepareBuildSettings.bind(this, buildSettings, api))
-    .then((buildSettings) => {
-        console.log(buildSettings);
-        return builder.build(buildSettings);
+    .then(() => {
+        (new ElectronBuilder(buildOptions, api))
+            .configure()
+            .build();
     })
     .catch((error) => {
         console.log(error);
