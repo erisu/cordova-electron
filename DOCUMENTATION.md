@@ -1,33 +1,31 @@
 # Cordova Electron
 
+Electron is a framework that uses web technologies (HTML, CSS, and JS) to build cross-platform desktop applications.
+
 - [Cordova Electron](#cordova-electron)
   - [System Requirements](#system-requirements)
     - [Linux](#linux)
     - [Mac](#mac)
     - [Windows](#windows)
-    - [Multi Platform Build Support](#multi-platform-build-support)
   - [Quick Start](#quick-start)
     - [Create a Project](#create-a-project)
     - [Preview a Project](#preview-a-project)
     - [Build a Project](#build-a-project)
-      - [Debug Builds](#debug-builds)
-      - [Release Builds](#release-builds)
-  - [Customizing the Application's Icon](#customizing-the-applications-icon)
   - [Customizing the Application's Main Process](#customizing-the-applications-main-process)
     - [Window Appearance (BrowserWindow)](#window-appearance-browserwindow)
       - [How to set the window default size?](#how-to-set-the-window-default-size)
       - [How to make the window not resizable?](#how-to-make-the-window-not-resizable)
       - [How to make my window fullscreen?](#how-to-make-my-window-fullscreen)
     - [DevTools](#devtools)
-  - [Building Configurations](#building-configurations)
-    - [Defaults](#defaults)
-      - [Linux](#linux-1)
-      - [Mac](#mac-1)
-      - [Windows](#windows-1)
-    - [Adding Package Targets](#adding-package-targets)
-    - [Building for Multiple OS](#building-for-multiple-os)
-    - [Setting the Archutechture](#setting-the-archutechture)
+  - [Build Configurations](#build-configurations)
+    - [Default Build Configurations](#default-build-configurations)
+    - [Customizing Build Configurations](#customizing-build-configurations)
+      - [Adding `target` packages](#adding-target-packages)
+      - [Setting the package `arch`](#setting-the-package-arch)
+    - [Multi-Platform Build Settings](#multi-platform-build-settings)
   - [Signing Configurations](#signing-configurations)
+    - [macOS Signing](#macos-signing)
+    - [Windows Signing](#windows-signing)
   - [Plugins](#plugins)
 
 ## System Requirements
@@ -45,27 +43,8 @@
   $ brew install rpm
   ```
 
-*
-
 ### Windows
-* **Powershell** must be updated to version 3.0 or greater for Windows 7 users.
-
-### Multi Platform Build Support
-
-Building for multiple platforms on a single operating system can possible but with limitation. For full support, it is recommended that the targeted platform and host OS are identical.
-
-The matrix below shows each host OS and for which platforms they are capable of building applications.
-
-| Host <sup>**[1]**</sup> | Linux              | Mac                | Window                       |
-| ----------------------- | :----------------: | :----------------: | :--------------------------: |
-| Linux                   | :white_check_mark: |                    | :warning: <sup>**[2]**</sup> |
-| Mac <sup>**[3]**</sup>  | :white_check_mark: | :white_check_mark: | :warning: <sup>**[2]**</sup> |
-| Window                  |                    |                    | :white_check_mark:           |
-
-**Limitations:**
-* **[1]** If the app contains native dependency, it can only be compiled on the target platform.
-* **[2]** Linux and macOS is unable to build Windows Appx packages for Windows Store.
-* **[3]** [All required system dependencies, except rpm, will be downloaded automatically on demand. RPM can be installed with brew. (macOS Sierra 10.12+)](https://www.electron.build/multi-platform-build#macos)
+* **Powershell** must be at version 3.0 or greater for Windows 7 users. This [requirement](https://www.electron.build/code-signing#windows) is required for signing an app.
 
 ## Quick Start
 ### Create a Project
@@ -77,32 +56,29 @@ $ cordova platform add electron
 ```
 
 ### Preview a Project
+
+For Electron, it is not necessary to build the application for previewing. Since the building process can be slow, it is recommended to pass in the `--no-build` flag to disable the build process when previewing.
+
 ```
 $ cordova run electron --no-build
 ```
 
-For Electron, it is not necessary to build the application before previewing. Since the building process can be slow, it is recommended to use the `--no-build` flag when previewing to disable the build process.
-
 ### Build a Project
-#### Debug Builds
+**Debug Builds**
 ```
 $ cordova build electron
 $ cordova build electron --debug
 ```
 
-#### Release Builds
+**Release Builds**
 ```
 $ cordova build electron --release
 ```
 
-**Difference between macOS and Mac Apple Store:**
-
-See the Signing Configurations on how to setup.
-
 <!-- @todo Update prepare.
-## Customizing the Application's Icon
+Customizing the Application's Icon
 
-In the `config.xml` file, there should be an Electron platform node with the icons defined. Example seen as below:
+In the `config.xml` file, there should be an Electron platform node with the icons defined. The example is seen as below:
 ```
 <platform name="electron">
   <icon src="res/electron/icon.ico" />
@@ -118,7 +94,7 @@ In the `{PROJECT_ROOT_DIR}/platform/electron/platform_www/` directory, the file 
 
 ### Window Appearance (BrowserWindow)
 
-Electron provides many optional options that can be used to manipulate the BrowserWindow. In this section, we will only cover a few of the options that many use. A full list of options can be found at [Electron's Docs - BrowserWindow Options](https://electronjs.org/docs/api/browser-window#new-browserwindowoptions)
+Electron provides many optional options that can manipulate the BrowserWindow. This section will cover a few of these options that many uses. A full list of these options can be found on the [Electron's Docs - BrowserWindow Options](https://electronjs.org/docs/api/browser-window#new-browserwindowoptions).
 
 #### How to set the window default size?
 
@@ -133,7 +109,7 @@ mainWindow = new BrowserWindow({
 
 #### How to make the window not resizable?
 
-Using the `resizable` flag, you can diable the default behavor that allows the application window to be resizable.
+Using the `resizable` flag can disable the default behavior that allows users to resize the application's window.
 
 ```
 mainWindow = new BrowserWindow({ resizable: false });
@@ -141,7 +117,7 @@ mainWindow = new BrowserWindow({ resizable: false });
 
 #### How to make my window fullscreen?
 
-Using the `fullscreen` flag, you can change the default behavor that will force your application to load in fullscreen.
+Using the `fullscreen` flag can force the application to launch in fullscreen.
 
 ```
 mainWindow = new BrowserWindow({ fullscreen: true });
@@ -149,55 +125,133 @@ mainWindow = new BrowserWindow({ fullscreen: true });
 
 ### DevTools
 
-In the current state of the Cordova Electron platform, the `--release` and `--debug` flag does not controll the ability to enable or disable the visibility of the DevTools. To enable the DevTools, in the main process file, find the line shown below and uncomment.
+In the current state of the Cordova Electron platform, the `--release` and `--debug` flag does not control the ability to enable or disable the visibility of the DevTools. To enable the DevTools, in the main process file, find the line shown below and uncomment.
 
 ```
 // mainWindow.webContents.openDevTools();
 ```
 
-## Building Configurations
+## Build Configurations
 
-### Defaults
-By default, with no additional configuration, `cordova build electron` will build the default packages for the host operating system (OS) that runs the command. Below, are the default packages for each OS.
+### Default Build Configurations
 
-#### Linux
+By default, with no additional configuration, `cordova build electron` will build default packages for the host operating system (OS) that triggers the command. Below, are the list of default packages for each OS.
+
+**Linux**
 
 | Package | Arch  |
 | ------- | :---: |
 | tar.gz  | x64   |
 
-#### Mac
+**Mac**
 
 | Package | Arch  |
 | ------- | :---: |
 | dmg     | x64   |
 | zip     | x64   |
 
-#### Windows
+**Windows**
 
 | Package | Arch  |
 | ------- | :---: |
 | nsis    | x64   |
 
-### Adding Package Targets
-when you add a package, the defaults will not be built. For example if you want a tar.gz for mac but you still want a dmg and zip, you will need to add all three.
+### Customizing Build Configurations
 
-Defining your own target..
+If for any reason you would like to customize the build configurations, the modifications are placed within the `build.json` file located in the project's root directory. E.g. `{PROJECT_ROOT_DIR}/build.json`. This file contains all build configurations for all platforms (Android, Electron, iOS, Windows).
+
+**Example Config Structure**
+
+```
+{
+  "electron": {}
+}
+```
+
+Since the Electron framework can also build multiple operating systems, the `electron` node will contain three sub-properties describing build configurations for each platform.
+
+**Example Config Structure with Each Platform**
+```
+{
+  "electron": {
+    linux: {},
+    mac: {},
+    windows: {}
+  }
+}
+```
+
+Each platform contains sub-properties that are used to identify what to build and how to sign.
+
+These three properties are:
+* `target` is a collection of target packages that will be built.
+* `arch` is a collection of architectures that each target package will be built for.
+* `signing` is an object that contains information necessary for the signing of the application.
+
+#### Adding `target` packages
+The `target` property is used for defining which package is to be generated from the build process.
+If the target property is defined, the default target packages will no longer be built unless specified.
+
+The example below shows how to config for macOS to build the `tar.gz` package target and the defaults (`dmg` and `zip`).
+
 ```
 {
   "electron": {
     "mac": {
       "target": [
-        "tar.gz"
+        "dmg",
+        "tar.gz",
+        "zip"
       ]
     },
   }
 }
 ```
-Any values that are not defined, for example `arch`, the default (`x64`) will be used.
 
-### Building for Multiple OS
-If you want to build for multiple os and use the defaults, you only need to define the target OS with no options.
+* The order of the targets has no importance.
+* Undefined properties will use default values.
+
+Using the above example, a `dmg`, `tar.gz`, and `zip` will be generated all with the `x64` architecture.
+
+#### Setting the package `arch`
+The `arch` property is used to define a collection of the architectures for each package. If the arch property is defined, the default will no longer be used unless specified.
+
+Example:
+```
+{
+  "electron": {
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "arch": ["ia32", "x64"]
+    },
+  }
+}
+```
+
+The example above will generate an `ia32` and `x64` dmg.
+
+### Multi-Platform Build Settings
+
+> :warning: This feature is not supported by all platform and has limitation.
+
+Building for multiple platforms on a single operating system can possible but with limitation. For full support, it is recommended that the targeted platform and host OS are identical.
+
+The matrix below shows each host OS and for which platforms they are capable of building applications.
+
+| Host <sup>**[1]**</sup> | Linux              | Mac                | Window                       |
+| ----------------------- | :----------------: | :----------------: | :--------------------------: |
+| Linux                   | :white_check_mark: |                    | :warning: <sup>**[2]**</sup> |
+| Mac <sup>**[3]**</sup>  | :white_check_mark: | :white_check_mark: | :warning: <sup>**[2]**</sup> |
+| Window                  |                    |                    | :white_check_mark:           |
+
+**Limitations:**
+* **[1]** If the app contains native dependency, it can only be compiled on the target platform.
+* **[2]** Linux and macOS are unable to build Windows Appx packages for Windows Store.
+* **[3]** [All required system dependencies, except rpm, will be downloaded automatically on demand. RPM can be installed with brew. (macOS Sierra 10.12+)](https://www.electron.build/multi-platform-build#macos)
+
+The example below enables multi-platform build for all OS using the default build configurations.
 
 ```
 {
@@ -209,28 +263,36 @@ If you want to build for multiple os and use the defaults, you only need to defi
 }
 ```
 
-### Setting the Archutechture
-
 ## Signing Configurations
 
+### macOS Signing
+
+The signing information is comprised of three types. (`debug`, `release`, and `store`). Each section has the following properties:
+
+| key | description |
+|-----------------------|-----------------------|
+|entitlements|String path value to entitlements file.|
+|entitlementsInherit|String path value to the entitlements file which inherits the security settings. |
+|identity|String value of the name of the certificate.|
+|[requirements](https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/RequirementLang/RequirementLang.html)|String path value of requirements file. <br /><br />:warning: This is not available for the `mas` (store) signing configurations.|
+|provisioningProfile|String path value of the provisioning profile.|
+
+**Example Config:**
 ```
 {
   "electron": {
     "mac": {
       "target": [
-        "dmg",  // use debug or release
-        "mas", // use only store
-        "mas-dev", // use debug
+        "dmg",
+        "mas",
+        "mas-dev",
       ],
       "signing": {
-        "debug": {
-
-        },
         "release": {
-
-        },
-        "store": {
-
+          "identity": "APACHE CORDOVA (TEAMID)",
+          "entitlements": "build/entitlements.mac.plist",
+          "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+          "provisioningProfile": "release.mobileprovision"
         }
       }
     },
@@ -238,27 +300,72 @@ If you want to build for multiple os and use the defaults, you only need to defi
 }
 ```
 
+For macOS signing, there are a few exceptions to how the signing information is used.
+By default, all targets with the exception of `mas` and `mas-dev`, use the `debug` and `release` signing configurations.
+
+Using the example config above, let's go over some use cases to better understand the exceptions.
+
+**Use Case 1:**
+
 ```
 $ cordova build electron --debug
 ```
 
-* dmg => debug
-* mas-dev => debug
-* mas => *ignored*
+The command above will:
+* Generate a `dmg` build and `mas-dev` build using the `debug` signing configurations.
+* Ignore the `mas` target.
+
+*Use Case 2:*
 
 ```
 $ cordova build electron --release
 ```
 
-* dmg => release
-* mas-dev => *ignored*
-* mas => store
+The command above will:
+* Generate a `dmg` build using the `release` config.
+* Generate a `mas` build using the `store` config.
+* Ignore the `mas-dev` target.
+
+
+### Windows Signing
+
+The signing information is comprised of two types. (`debug`, `release`). Each section has the following properties:
+
+| key | description |
+|-----------------------|-----------------------|
+|certificateFile|String path value to the certificate file.|
+|certificatePassword|String value of the certificate file's password. |
+|certificateSubjectName|String value...|
+|certificateSha1|String value...|
+|signingHashAlgorithms|String value...|
+|additionalCertificateFile|String value to the additional certificate files.|
+
+**Example Config:**
+```
+{
+  "electron": {
+    "windows": {
+      "target": [
+        "nsis"
+      ],
+      "signing": {
+        "release": {
+          "certificateFile": "path_to_files",
+          "certificatePassword": "password",
+          "certificateSubjectName": "string",
+          "certificateSha1": "string",
+          "signingHashAlgorithms": "string",
+          "additionalCertificateFile": "path_to_files"
+        }
+      }
+    },
+  }
+}
+```
 
 ## Plugins
+All browser-based plugins are usable with the Electron platform. 
 
-All browser based plugins are usable with the Electron platform. 
+Internally, Electron is using Chromium (Chrome) as its web view. Some plugins may have condition written specifically for each browser. In this type of case, it may affect the behavior from what is intended. Since Electron may support feature that the browser does not, these plugins would need to be updated for Electron.
 
-Internally, Electron is using Chromium (Chrome) as its web view. Some plugins may have condition written specificly for each browser. In this type of case, it may affect the behaviour from what is intended. Since Electron may support feature that the browser does not, these plugins would need to be updated for Electron.
-
-When adding a plugin, if the plugin supports both Electron and Browser, the Electron portion will be used. If there is browser, but no Electron, browser will be used.
-
+When adding a plugin, if the plugin supports both Electron and Browser, the Electron portion will be used. If the plugin contains the browser platform, but missing Electron, the browser platform will be used.
