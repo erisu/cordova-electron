@@ -49,6 +49,8 @@ module.exports.createProject = (project_path, package_name, project_name, option
         // TODO: use events.emit
         events.emit('error', 'Please make sure you meet the software requirements in order to build a cordova electron project');
     }
+    
+    fs.mkdirSync(project_path);
 
     // copy templates/cordova directory ( recursive )
     fs.copySync(path.join(ROOT, 'bin/templates/cordova'), path.join(project_path, 'cordova'), { overwrite: false });
