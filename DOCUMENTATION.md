@@ -244,21 +244,21 @@ $ cordova build electron --debug
 
 * dmg => debug
 * mas-dev => debug
-* mas => *iggnored*
+* mas => *ignored*
 
 ```
 $ cordova build electron --release
 ```
 
 * dmg => release
-* mas-dev => *iggnored*
+* mas-dev => *ignored*
 * mas => store
 
 ## Plugins
 
 All browser based plugins are usable with the Electron platform. 
 
-Internally, Electron is using Chromium (Chrome) as its web view. Some plugins may have condition written specificly for each browser. In this tpye of case, it may affect the behaviou from what is intended. Since Electron may support feature that the browser does not, these plugins would need to be updated for Electron.
+Internally, Electron is using Chromium (Chrome) as its web view. Some plugins may have condition written specificly for each browser. In this type of case, it may affect the behaviour from what is intended. Since Electron may support feature that the browser does not, these plugins would need to be updated for Electron.
 
 When adding a plugin, if the plugin supports both Electron and Browser, the Electron portion will be used. If there is browser, but no Electron, browser will be used.
 
