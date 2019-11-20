@@ -26,5 +26,5 @@ node_js: 12
 script:
   - npm cit
 
-after_script:
-  - npx codecov
+# after_script:
+#   - npx codecov
