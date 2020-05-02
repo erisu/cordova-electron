@@ -17,14 +17,17 @@
     "prepack": "node .npm-scripts/prepack.js",
     "test": "npm run lint && npm run test:coverage",
     "test:coverage": "nyc npm run test:unit",
-    "test:unit": "jasmine --config=tests/spec/unit.json"
+    "test:unit": "jasmine --config=tests/spec/unit.json",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "dependencies": {
     "cordova-common": "^4.0.1-nightly.2020.5.1.82cded7d",
     "electron": "^8.2.5",
     "electron-builder": "^22.6.0",
     "execa": "^4.0.0",
-    "fs-extra": "^9.0.0"
+    "fs-extra": "^9.0.0",
+    "snyk": "^1.316.2"
   },
   "devDependencies": {
     "@cordova/eslint-config": "^3.0.0",
@@ -69,5 +72,6 @@
       "lcov",
       "text"
     ]
-  }
+  },
+  "snyk": true
 }
