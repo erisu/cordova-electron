@@ -148,11 +148,36 @@ app.on('activate', () => {
 
 ipcMain.handle('cdv-plugin-exec', async (_, serviceName, action, ...args) => {
     if (cordova && cordova.services && cordova.services[serviceName]) {
-        const plugin = require(cordova.services[serviceName]);
+        const servicePkg = cordova.services[serviceName];
+        const pluginPkgJson = require(path.join(servicePkg, 'package.json'));
 
-        return plugin[action]
-            ? plugin[action](args)
-            : Promise.reject(new Error(`The action "${action}" for the requested plugin service "${serviceName}" does not exist.`));
+        let removeExtraArrayWrapper;
+        if (pluginPkgJson && pluginPkgJson.cordova && pluginPkgJson.cordova.config && pluginPkgJson.cordova.config.removeExtraArrayWrapper) {
+            removeExtraArrayWrapper = pluginPkgJson.cordova.config.removeExtraArrayWrapper;
+        }
+
+        const plugin = require(servicePkg);
+        if (!plugin && !plugin[action]) {
+            Promise.reject(new Error(`The action "${action}" for the requested plugin service "${serviceName}" does not exist.`));
+            return;
+        }
+
+        const displayFalseNotice = () => {
+            console.warn('Arguments are accidently passed in a unncessary multidimensional array.');
+            console.warn('Read here to prepare your plugin for future release: ...');
+        };
+
+        if (removeExtraArrayWrapper === true) {
+            return plugin[action](...args);
+        } else if (removeExtraArrayWrapper === false) {
+            displayFalseNotice();
+            return plugin[action](args);
+        } else {
+            // Undefined or anything else...
+            console.warn('Please explistly define the "removeExtraArrayWrapper" flag in the plugin\'s Electron "package.json".');
+            displayFalseNotice();
+            return plugin[action](args);
+        }
     } else {
         return Promise.reject(new Error(`The requested plugin service "${serviceName}" does not exist have native support.`));
     }
